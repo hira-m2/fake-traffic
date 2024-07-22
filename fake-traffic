@@ -238,6 +238,12 @@ update(){
 }
 
 
+iperf() {
+    local command rand
+    rand=$(shuf -i 2-168 -n 1)
+    command=$(awk '{ FS="," } NR=='"$rand"'{print $1}' servers.csv)
+    eval $command $1
+}
 
 run() {
        local random_method tts srt
@@ -307,22 +313,49 @@ run_base_stats() {
 
     stats
 
-    local tts
+    local tts srt random_method
+    srt=$(shuf -i 1-270 -n 1)
     tts=$(shuf -i 44-280 -n 1)
+    random_method=$(shuf -i 1-2000 -n 1)
 
-
-    if [[ "$result" -gt 10 ]]; then
-#        echo -e "Download mode"
-        echo -e "Run speedtest in download mode with tts: $tts "
-        librespeed-cli --no-upload --simple --no-icmp --duration "$tts"
-    fi
-    if [[ "$result" -lt 10 ]]; then
+    sleep "$srt"s
+    if [[ "$result" -gt 12 ]]; then
+        # echo -e "Download mode"
+        if [ $((random_method%4)) -eq 0 ]; then
+            echo -e "Run iperf in downlad mode"
+            iperf -R
+            sleep $(shuf -i 1-30 -n1)s
+            iperf -R
+            sleep $(shuf -i 1-30 -n1)s
+            iperf -R
+        else
+            echo -e "Run speedtest in download mode with tts: $tts "
+            librespeed-cli --no-upload --simple --no-icmp --duration "$tts"
+        fi
+    elif [[ "$result" -lt 10 ]]; then
         #        echo -e "Upload mode"
-        echo -e "Run speedtest in upload mode with tts: $tts "
-        librespeed-cli --no-download --simple --no-icmp --duration "$tts"
-    fi
-    if [[ "$result" -eq 10 ]]; then
+        if [ $((random_method%4)) -eq 0 ]; then
+            echo -e "Run iperf in upload mode"
+            iperf
+            sleep $(shuf -i 1-30 -n1)s
+            iperf
+            sleep $(shuf -i 1-30 -n1)s
+            iperf
+        else
+            echo -e "Run speedtest in upload mode with tts: $tts "
+            librespeed-cli --no-download --simple --no-icmp --duration "$tts"
+        fi
+    else
         echo -e "traffic is good."
+        if [ $((random_method%10)) -eq 0 ]; then
+            if [ $((srt%2)) -eq 0 ]; then
+                echo -e "Run speedtest in download mode with tts: $tts "
+                librespeed-cli --no-upload --simple --no-icmp --duration "$tts"
+            else
+                echo -e "Run speedtest in upload mode with tts: $tts "
+                librespeed-cli --no-download --simple --no-icmp --duration "$tts"
+            fi
+        fi
     fi
 
 }
@@ -342,10 +375,10 @@ case $1 in
         run
         ;;
     --10to1|10to1)
-        detect_os
-        os_version
-        install_dependencies
-        install_script
+        #detect_os
+        #os_version
+        #install_dependencies
+        #install_script
         run_base_stats #"$1"
         ;;
     --stats|stats)
